@@ -7,6 +7,10 @@ import { evaluate } from "mathjs";
 let scale = 2
 
 let full_map = new Array(180).fill("").map(() => new Array(360).fill(""));
+let width = 360*scale
+let height = 180*scale
+
+width = height = Math.max(width, height)
 
 const cities = 'cities_with_climate_temp.csv'
 const grid = 'grid_with_climate_temp.csv'
@@ -51,14 +55,14 @@ const draw = (xEquation="lon", yEquation="lat") => {
 	const canvas = document.getElementById("canvas");
 	const ctx = canvas.getContext("2d");
 	ctx.fillStyle = get_color_for_climate()
-	ctx.fillRect(0, 0, scale, scale);
+	ctx.fillRect(0, 0, width, height);
 	let xEq, yEq
 	for (let lon = 0; lon<360; ++lon){
 		for (let lat = 0; lat<180; ++lat){
-			xEq = xEquation.length < 1 ? lon : xEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat)
-			yEq = yEquation.length < 1 ? lon : yEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat)
+			xEq = xEquation && xEquation.length ? xEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat) : (lon-180).toString()
+			yEq = yEquation && yEquation.length ? yEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat) : (90-lat).toString()
 			ctx.fillStyle = get_color_for_climate(full_map[lat][lon])
-			ctx.fillRect((evaluate(xEq)+180)*scale, (180-lat)*scale, scale, scale);
+			ctx.fillRect((evaluate(xEq)+180)*scale, (180+evaluate(yEq))*scale, scale, scale);
 		}
 	}
 }
@@ -67,18 +71,30 @@ const App = () => {
 	const [xEquation, setXEquation] = useState("lon")
 	const [yEquation, setYEquation] = useState("lat")
 
+	
+	const useSampleProjection = () => {
+		setXEquation("lon*(90-(lat*lat)/90)/90")
+		setYEquation("lat")
+	}
+	const useDefaultProjection = () => {
+		setXEquation("lon")
+		setYEquation("lat")
+	}
+
 	return(
   	<>
-    	<h1>Welcome to React Vite Micro App!</h1>
+    	<h1>Map Projection</h1>
+		<button onClick={useDefaultProjection}>use default projection</button>
+		<button onClick={useSampleProjection}>use sample projection</button>
 		<p>Use lat for latitude</p>
 		<p>Use lon for latitude</p>
 		<input placeholder="x=" onChange={e => setXEquation(e.target.value)} value={xEquation}/>
 		<br />
-		<input placeholder="y=" />
+		<input placeholder="y=" onChange={e => setYEquation(e.target.value)} value={yEquation}/>
 		<br />
 		<button onClick={() => draw(xEquation, yEquation)}>DRAW</button>
 		<br />
-		<canvas id="canvas" width={360*scale} height={180*scale} style={{"border":"1px solid black"}}>
+		<canvas id="canvas" width={width} height={height} style={{"border":"1px solid black"}}>
 			Sorry, your browser does not support canvas.
 		</canvas>
 	</>

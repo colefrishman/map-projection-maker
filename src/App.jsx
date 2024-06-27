@@ -3,6 +3,7 @@ import fs from 'fs'
 import * as nodeCsv from 'node-csv';
 import gridData from './grid_with_climate_temp'
 import { evaluate } from "mathjs";
+import { Button, Form } from "react-bootstrap";
 
 let scale = 2
 
@@ -51,7 +52,11 @@ let get_color_for_climate = (climate) => {
 	return "grey"
 }
 
-const draw = (xEquation="lon", yEquation="lat") => {
+function mod(n, m) {
+	return ((n % m) + m) % m;
+}
+
+const draw = (xEquation="lon", yEquation="lat", offset=[0,0]) => {
 	const canvas = document.getElementById("canvas");
 	const ctx = canvas.getContext("2d");
 	ctx.fillStyle = get_color_for_climate()
@@ -59,8 +64,8 @@ const draw = (xEquation="lon", yEquation="lat") => {
 	let xEq, yEq
 	for (let lon = 0; lon<360; ++lon){
 		for (let lat = 0; lat<180; ++lat){
-			xEq = xEquation && xEquation.length ? xEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat) : (lon-180).toString()
-			yEq = yEquation && yEquation.length ? yEquation.replaceAll("lon", lon-180).replaceAll("lat", 90-lat) : (90-lat).toString()
+			xEq = xEquation && xEquation.length ? xEquation.replaceAll("lon", -180+mod((lon+offset[0]),360)).replaceAll("lat", 90-mod((lat+offset[1]),180)) : (-180+mod((lon+offset[0]),360)).toString()
+			yEq = yEquation && yEquation.length ? yEquation.replaceAll("lon", -180+mod((lon+offset[0]),360)).replaceAll("lat", 90-mod((lat+offset[1]),180)) : (90-mod((lat+offset[1]),180)).toString()
 			ctx.fillStyle = get_color_for_climate(full_map[lat][lon])
 			ctx.fillRect((evaluate(xEq)+180)*scale, (180+evaluate(yEq))*scale, scale, scale);
 		}
@@ -70,6 +75,7 @@ const draw = (xEquation="lon", yEquation="lat") => {
 const App = () => {
 	const [xEquation, setXEquation] = useState("lon")
 	const [yEquation, setYEquation] = useState("lat")
+	const [offset, setOffset] = useState([0,0])
 
 	
 	const useSampleProjection = () => {
@@ -84,15 +90,27 @@ const App = () => {
 	return(
   	<>
     	<h1>Map Projection</h1>
-		<button onClick={useDefaultProjection}>use default projection</button>
-		<button onClick={useSampleProjection}>use sample projection</button>
+		<Button onClick={useDefaultProjection}>use default projection</Button>
+		<Button onClick={useSampleProjection}>use sample projection</Button>
 		<p>Use lat for latitude</p>
 		<p>Use lon for latitude</p>
-		<input placeholder="x=" onChange={e => setXEquation(e.target.value)} value={xEquation}/>
+		<Form.Group>
+			<Form.Label>x= </Form.Label>
+			<input placeholder="x=" onChange={e => setXEquation(e.target.value)} value={xEquation}/>
+		</Form.Group>
+		<Form.Group>
+			<Form.Label>y= </Form.Label>
+			<input placeholder="y=" onChange={e => setYEquation(e.target.value)} value={yEquation}/>
+		</Form.Group>
 		<br />
-		<input placeholder="y=" onChange={e => setYEquation(e.target.value)} value={yEquation}/>
+		<Form.Group>
+			<Form.Label>Displacement</Form.Label>
+			<br />
+			<Form.Label>Longitude displacement</Form.Label><br />
+			<input placeholder="0" onChange={e => setOffset([Number(e.target.value), offset[1]])} type="number" value={offset[0]}/>
+		</Form.Group>
 		<br />
-		<button onClick={() => draw(xEquation, yEquation)}>DRAW</button>
+		<Button onClick={() => draw(xEquation, yEquation, offset)}>DRAW</Button>
 		<br />
 		<canvas id="canvas" width={width} height={height} style={{"border":"1px solid black"}}>
 			Sorry, your browser does not support canvas.
